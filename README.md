@@ -1,2 +1,2 @@
 # Omnibus
- Split keyboard
+ Split keyboard inspired by the Arteus
