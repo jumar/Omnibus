@@ -1,3 +1,4 @@
+use <Hershey_fonts/hershey.scad>
 // -*- mode: c -*-
 /* All distances are in mm. */
 
@@ -31,7 +32,7 @@ washer_radius     = 4 * screw_hole_radius;
 back_screw_hole_offset = 0;
 
 /* Distance between halves. */
-hand_separation        = 0;
+hand_separation        = 10;
 
 /* The approximate size of switch holes. Used to determine how
    thick walls can be, i.e. how much room around each switch hole to
@@ -272,6 +273,8 @@ module top_plate() {
     right_half(false);
     left_half(false);
   }
+  custom_text();
+  custom_text(true);
 }
 
 module switch_plate() {
@@ -327,7 +330,7 @@ module quartered_spacer()
 
 translate([0,0,9]) top_plate();
 translate([0, 0, 6]) { switch_plate(); }
-translate([300, 0,0]) { bottom_plate(); }
+//translate([0, 0,0]) { bottom_plate(); }
 translate([0,0,3]) spacer();
 translate([0, 0,0]) {
   if (quarter_spacer == true) {
@@ -336,5 +339,24 @@ translate([0, 0,0]) {
   else {
     spacer();
   }
+}
+module custom_text(){
+// Add text
+  text = "...";
+  my_font = "Script";
+  my_size = 8;
 
+  width = widthHersheyText(text, size=my_size, font=my_font);
+  echo(width);
+
+  render(convexity=2)
+  //difference() {
+    rotate([0,0,0]){
+    translate([69.5,18,3])
+    rotate([0,0,10])
+    drawHersheyText(text, font=my_font, size=my_size, valign="center")
+    cylinder(r1=1,r2=0.2,h=2,$fn=8);
+        //sphere(r=2,$fn=8);
+    }
+    //}
 }

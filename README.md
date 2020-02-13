@@ -1,5 +1,5 @@
 # Omnibus
- Split keyboard based on the Arteus. 
+ 54 keys split keyboard based on the Arteus 42. 
  
  On each half it has 2 thumb keys, one additional outer column and one additional key at the top of the inner column.
  
