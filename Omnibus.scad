@@ -330,7 +330,7 @@ module quartered_spacer()
 
 translate([0,0,9]) top_plate();
 translate([0, 0, 6]) { switch_plate(); }
-//translate([0, 0,0]) { bottom_plate(); }
+translate([0, 0,0]) { bottom_plate(); }
 translate([0,0,3]) spacer();
 translate([0, 0,0]) {
   if (quarter_spacer == true) {
