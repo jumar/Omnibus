@@ -2,7 +2,7 @@
 /* All distances are in mm. */
 
 /* set output quality */
-$fn = 20;
+$fn = 10;
 
 /* Distance between key centers. */
 IN_COLUMN_SPACING   = 19;
@@ -32,7 +32,7 @@ WASHER_HOLE_RADIUS     = 4 * SCREW_HOLE_RADIUS;
 BACK_SCREW_HOLE_OFFSET = 0;
 
 /* Distance between halves. */
-HAND_SEPARATION        = 15;
+HAND_SEPARATION        = 5;
 
 /* The approximate size of switch holes. Used to determine how
    thick walls can be, i.e. how much room around each switch hole to
@@ -46,12 +46,12 @@ USE_NOTCHED_HOLES = false;
 /* Number of rows and columns in the matrix. You need to update
    STAGGERING_OFFSETS and COL_KEY_COUNTS if you change NB_COLS. */
 NB_COLS = 7;
-COL_KEY_COUNTS = [3, 4, 4, 5, 4, 4, 5]; // Number of keys per columns
+COL_KEY_COUNTS = [3, 5, 4, 4, 4, 4, 4]; // Number of keys per columns
 MAX_NB_ROWS = 5; // Highest value in COL_KEY_COUNTS
 
 /* Vertical column staggering offsets. The 1st element should
    be zero (innermost column) */
-STAGGERING_OFFSETS = [10, 5, 10, 16, 13, 6, 5];
+STAGGERING_OFFSETS = [0, 5, 10, 16, 13, 6, 5];
 
 /* The width of the USB cable hole in the spacer. */
 CABLE_HOLE_WIDTH = 12;
@@ -107,17 +107,70 @@ module create_key_hole(position, size) {
         cube([size, size, HOLE_HEIGHT], center=true);
     }
 }
+TYPE_SWITCH_HOLES   = "switch_holes";
+TYPE_KEY_HOLES      = "key_holes";
+TYPE_TEXTURE        = "texture";
+NONE                = "none";
+TOP                 = "top";
+BOTTOM              = "bottom";
+TOP_BOTTOM          = "top_bottom";
+TOP_HALF            = "top_half";
+TOP_DOUBLE          = "top_double";
+BOTTOM_HALF         = "bottom_half";
+TEXTURE_TYPE        = [TOP_HALF, TOP, TOP_DOUBLE, TOP_BOTTOM, NONE, NONE, NONE];
+
+module create_spike(texture_type=NONE, row_count) {
+    echo(texture_type);
+    if (texture_type == TOP || texture_type == TOP_BOTTOM) {
+        for(i = [0:4]) {
+            for(j = [0:5]) {  
+                translate([-6+3*i, -10+row_count*KEY_HOLE_SIZE+3*j, 1]) cylinder(h=2, r1=0.1, r2=1, center=false);
+            }
+        }
+    }
+    if (texture_type == TOP_DOUBLE) {
+        for(i = [0:4]) {
+            for(j = [0:9]) {  
+                translate([-6+3*i, -10+row_count*KEY_HOLE_SIZE+3*j, 1]) cylinder(h=2, r1=0.1, r2=1, center=false);
+            }
+        }
+    }
+    if (texture_type == TOP_HALF) {
+        for(i = [0:4]) {
+            for(j = [-i:0]) {  
+                translate([-6+3*i, -9+row_count*KEY_HOLE_SIZE-3*j, 1]) cylinder(h=2, r1=0.1, r2=1, center=false);
+            }
+        }
+    }
+    if(texture_type == BOTTOM || texture_type == TOP_BOTTOM) {
+        for(i = [0:4]) {
+            for(j = [0:5]) {
+                translate([-6+3*i, -13-3*j, 1]) cylinder(h=2, r1=0.1, r2=1, center=false);
+            }
+        }
+    }
+    if(texture_type == BOTTOM_HALF) {
+        for(i = [0:4]) {
+            for(j = [0:i]) {
+                translate([-6+3*i, -13-3*j, 1]) cylinder(h=2, r1=0.1, r2=1, center=false);
+            }
+        }
+    }
+}
 
 /* Create a column of keys. if create_switch_holes is true, creates switch holes
    otherwise creates key holes. */
-module create_column(bottom_position, create_switch_holes, key_size=KEY_HOLE_SIZE, row_count) {
+module create_column(bottom_position, type, key_size=KEY_HOLE_SIZE, row_count, texture_type=NONE) {
     translate(bottom_position) {
-        for (i = [0:(row_count-1)]) {
-            if (SWITCH_HOLE_SIZE == true) {
-                create_switch_hole([0, i*IN_COLUMN_SPACING, -1]);
-            } else {
-                create_key_hole([0, i*IN_COLUMN_SPACING, -1], key_size);
-            }
+        for (row = [0:(row_count-1)]) {
+            if (type == TYPE_SWITCH_HOLES) {
+                create_switch_hole([0, row*IN_COLUMN_SPACING, -1]);
+            } else if (type == TYPE_KEY_HOLES) {
+                create_key_hole([0, row*IN_COLUMN_SPACING, -1], key_size);
+            }  
+        }
+        if (type == TYPE_TEXTURE) {
+            create_spike(texture_type, row_count);
         }
     }
 }
@@ -147,21 +200,22 @@ module add_hand_separation() {
 /* Create switch holes (create_switch_holes=true) or key holes (create_switch_holes=false)
    for the right half of the keyboard. Different key_sizes are used in top_plate() and
    spacer(). */
-module create_right_half_holes(create_switch_holes=true, key_size=KEY_HOLE_SIZE) {
+module create_right_half_features(type, key_size=KEY_HOLE_SIZE) {
     x_offset = 0.5 * IN_ROW_SPACING;
     y_offset = 0.5 * IN_COLUMN_SPACING;
     thumb_key_offset = y_offset + 0.5 * IN_COLUMN_SPACING;
     rotate_half() {
         add_hand_separation() {
-            for (c=[0:(NB_COLS-1)]) {
-                create_column([x_offset + c*IN_ROW_SPACING, y_offset + STAGGERING_OFFSETS[c]], SWITCH_HOLE_SIZE, key_size, COL_KEY_COUNTS[c]);
+            for (col=[0:(NB_COLS-1)]) {
+                pos = [x_offset + col*IN_ROW_SPACING, y_offset + STAGGERING_OFFSETS[col]];
+                create_column(pos, type, key_size, COL_KEY_COUNTS[col],TEXTURE_TYPE[col]);
             }
         }
     }
 }
 
-module create_left_half_holes(create_switch_holes=true, key_size=KEY_HOLE_SIZE) {
-  mirror ([1,0,0]) { create_right_half_holes(create_switch_holes, key_size); }
+module create_left_half_features(type, key_size=KEY_HOLE_SIZE) {
+  mirror ([1,0,0]) { create_right_half_features(type, key_size); }
 }
 
  /* Create a screw hole of radius `radius` at a location
@@ -171,7 +225,7 @@ module create_left_half_holes(create_switch_holes=true, key_size=KEY_HOLE_SIZE) 
      position to move to, [-1, -1] for bottom left, etc. */
 module create_screw_hole(radius, offset_radius, position, direction) {
     /* radius_offset is the offset in the x (or y) direction so that
-        we're offset_radius from position */
+        we're offset from position */
     radius_offset = offset_radius / sqrt(2);
     /* key_hole_offset if the difference between key spacing and key
         hole edge */
@@ -194,7 +248,7 @@ module create_right_screw_holes(hole_radius) {
     rotate_half() {
         add_hand_separation() {
         // bottom center 
-        create_screw_hole(hole_radius, WASHER_HOLE_RADIUS, [13, -6], [-nudge, -nudge]);
+        create_screw_hole(hole_radius, WASHER_HOLE_RADIUS, [0, 0], [-nudge, -nudge]);
         // bottom right
         create_screw_hole(hole_radius, WASHER_HOLE_RADIUS, [(NB_COLS)*IN_ROW_SPACING, STAGGERING_OFFSETS[NB_COLS-1]], [nudge, -nudge]);
         // top right
@@ -222,8 +276,8 @@ module create_screw_holes(hole_radius) {
 /* bottom layer of the case */
 module create_bottom_plate() {
     difference() {
-        hull() { create_screw_holes(WASHER_HOLE_RADIUS); }
-        create_screw_holes(SCREW_HOLE_RADIUS);
+        hull() { color("pink") create_screw_holes(WASHER_HOLE_RADIUS); }
+        color("red") create_screw_holes(SCREW_HOLE_RADIUS);
     }
 }
 
@@ -231,8 +285,10 @@ module create_bottom_plate() {
 module create_top_plate() {
     difference() {
         create_bottom_plate();
-        create_right_half_holes(false);
-        create_left_half_holes(false);
+        create_right_half_features(TYPE_KEY_HOLES);
+        create_left_half_features(TYPE_KEY_HOLES);
+        //create_right_half_features(TYPE_TEXTURE);
+        //create_left_half_features(TYPE_TEXTURE);
     }
 }
 
@@ -240,9 +296,9 @@ module create_top_plate() {
 module create_switch_plate() {
     difference() {
         create_bottom_plate();
-        create_right_half_holes();
-        create_left_half_holes();
-  }
+        create_right_half_features(TYPE_SWITCH_HOLES);
+        create_left_half_features(TYPE_SWITCH_HOLES);
+    }
 }
 
 /* Create a spacer. */
@@ -252,8 +308,8 @@ module create_spacer() {
             difference() {
                 create_bottom_plate();
                 hull() {
-                    create_right_half_holes(create_switch_holes=false, key_size=SWITCH_HOLE_SIZE + 3);
-                    create_left_half_holes(create_switch_holes=false, key_size=SWITCH_HOLE_SIZE + 3);
+                    create_right_half_features(TYPE_KEY_HOLES, SWITCH_HOLE_SIZE + 3);
+                    create_left_half_features(TYPE_KEY_HOLES, SWITCH_HOLE_SIZE + 3);
                 }
                 /* add the USB cable hole: */
                 translate([-0.5*CABLE_HOLE_WIDTH, 2*IN_COLUMN_SPACING,0]) {
@@ -267,8 +323,16 @@ module create_spacer() {
 }
 
 /* Now create all four layers. */
-translate([0,0,9]) create_top_plate();
-translate([0, 0, 6]) { create_switch_plate(); }
-//translate([0, 0,0]) { create_bottom_plate(); }
-//translate([0,0,3]) create_spacer();
-//translate([0, 0,0]) create_spacer();
+
+translate([0, 0, 9]) {
+    //create_top_plate();
+    //create_right_half_features(TYPE_TEXTURE);
+    //create_left_half_features(TYPE_TEXTURE);
+}
+
+color("black") translate([0, 0, 6]) create_switch_plate(); 
+//translate([0, 0, -3]) create_bottom_plate();
+translate([0, 0, 3]) create_spacer();
+translate([0, 0, 0]) create_spacer();
+translate([0, 0, -3]) create_spacer();
+
